@@ -16,45 +16,10 @@ interface SearchHistoryPanelProps {
 
 export function SearchHistoryPanel({ onClose, onApplySearch }: SearchHistoryPanelProps) {
     const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
-    const [isAdminMode, setIsAdminMode] = useState(false);
-    const [shiftPressCount, setShiftPressCount] = useState(0);
-    const [shiftTimer, setShiftTimer] = useState<number | null>(null);
 
     useEffect(() => {
         setHistory(getSearchHistory());
     }, []);
-
-    // Admin mode toggle: Press Shift twice quickly
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Shift') {
-                setShiftPressCount(prev => {
-                    const newCount = prev + 1;
-
-                    // Clear existing timer
-                    if (shiftTimer) clearTimeout(shiftTimer);
-
-                    // If double-shift detected, toggle admin mode
-                    if (newCount === 2) {
-                        setIsAdminMode(current => !current);
-                        return 0;
-                    }
-
-                    // Set timer to reset count
-                    const timer = setTimeout(() => setShiftPressCount(0), 500);
-                    setShiftTimer(timer);
-
-                    return newCount;
-                });
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            if (shiftTimer) clearTimeout(shiftTimer);
-        };
-    }, [shiftTimer]);
 
     const handleDelete = (id: string) => {
         deleteSearchEntry(id);
@@ -215,17 +180,15 @@ export function SearchHistoryPanel({ onClose, onApplySearch }: SearchHistoryPane
                                         Export
                                     </span>
                                 </button>
-                                {isAdminMode && (
-                                    <button
-                                        onClick={handleClearAll}
-                                        className="w-full h-10 border border-destructive/20 rounded-lg flex items-center justify-center gap-2 hover:bg-destructive/10 text-destructive transition-colors cursor-pointer"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        <span className="font-[number:var(--font-weight-semi-bold)] text-[length:var(--text-paragraph-sm)]">
-                                            Clear All (Admin)
-                                        </span>
-                                    </button>
-                                )}
+                                <button
+                                    onClick={handleClearAll}
+                                    className="w-full h-10 border border-destructive/20 rounded-lg flex items-center justify-center gap-2 hover:bg-destructive/10 text-destructive transition-colors cursor-pointer"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span className="font-[number:var(--font-weight-semi-bold)] text-[length:var(--text-paragraph-sm)]">
+                                        Clear All
+                                    </span>
+                                </button>
                             </>
                         )}
                         <button

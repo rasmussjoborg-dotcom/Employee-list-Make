@@ -268,6 +268,11 @@ function EmployeeTable({
                 saveSearchQuery(searchQuery, selectedRole);
               }
             }}
+            onBlur={() => {
+              if (searchQuery.trim() && selectedRole) {
+                saveSearchQuery(searchQuery, selectedRole);
+              }
+            }}
             className="w-full pl-12 pr-24 py-3 bg-transparent border border-border rounded-lg text-[length:var(--text-paragraph-md)] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             placeholder="Search or filter — or ask AI to help…"
           />
