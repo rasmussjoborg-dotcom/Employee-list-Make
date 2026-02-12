@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { AnimatePresence } from "motion/react";
-import { Settings, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { Settings, ChevronLeft, ChevronRight, Check, X, History } from "lucide-react";
 import svgPaths from "../imports/svg-kuti7blt5y";
+import { EMPLOYEES, Employee, FilterState } from "./data/employees";
 import { FilterPanel } from "./components/FilterPanel";
+import { SavedSearchesPanel } from "./components/SavedSearchesPanel";
+import { SearchHistoryPanel } from "./components/SearchHistoryPanel";
 import { CustomizeColumnsPanel } from "./components/CustomizeColumnsPanel";
 import { BulkActionMenu } from "./components/BulkActionMenu";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
+import { RoleSelection, UserRole } from "./components/RoleSelection";
+import { saveSearchQuery } from "./utils/searchHistory";
+
 const imgUserPersonas = "https://i.pravatar.cc/150?u=user";
-import { EMPLOYEES, Employee, FilterState } from "./data/employees";
 
 // --- Icons using the imported SVG paths ---
 
@@ -57,7 +62,12 @@ const AVAILABLE_COLUMNS = [
 
 // --- Components ---
 
-function Header() {
+interface HeaderProps {
+  selectedRole?: UserRole | null;
+  onChangeRole?: () => void;
+}
+
+function Header({ selectedRole, onChangeRole }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border">
       <div className="flex items-center justify-between px-8 py-5 bg-card">
@@ -77,6 +87,18 @@ function Header() {
             </div>
             <span className="text-foreground px-2">Label</span>
           </div>
+
+          {selectedRole && onChangeRole && (
+            <>
+              <div className="h-3 w-px bg-border mx-2" />
+              <button
+                onClick={onChangeRole}
+                className="text-[length:var(--text-paragraph-sm)] text-primary hover:text-primary/80 font-[number:var(--font-weight-semi-bold)] transition-colors cursor-pointer underline"
+              >
+                Change Role ({selectedRole})
+              </button>
+            </>
+          )}
         </div>
 
         {/* Center: Logo */}
@@ -182,6 +204,8 @@ function EmployeeTable({
   onToggleEmployee,
   onToggleAll,
   onOpenFilters,
+  onOpenSavedSearches,
+  onOpenSearchHistory,
   onOpenCustomizeColumns,
   searchQuery,
   onSearchChange,
@@ -190,7 +214,9 @@ function EmployeeTable({
   currentPage,
   totalPages,
   onPageChange,
-  visibleColumns
+  visibleColumns,
+  onClearFilters,
+  selectedRole
 }: {
   employees: Employee[];
   totalEmployees: number;
@@ -198,6 +224,8 @@ function EmployeeTable({
   onToggleEmployee: (id: string) => void;
   onToggleAll: () => void;
   onOpenFilters: () => void;
+  onOpenSavedSearches: () => void;
+  onOpenSearchHistory: () => void;
   onOpenCustomizeColumns: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -207,6 +235,8 @@ function EmployeeTable({
   totalPages: number;
   onPageChange: (page: number) => void;
   visibleColumns: string[];
+  onClearFilters: () => void;
+  selectedRole: UserRole | null;
 }) {
 
 
@@ -222,11 +252,6 @@ function EmployeeTable({
             </div>
             <h4 className="text-foreground">All employees ({totalEmployees})</h4>
           </div>
-
-          <button className="flex items-center gap-1.5 px-3 py-2 text-secondary-foreground hover:bg-muted/50 rounded-lg transition-colors cursor-pointer">
-            <span className="font-[number:var(--font-weight-semi-bold)] text-[length:var(--text-paragraph-sm)]">Save search</span>
-            <Icon path={svgPaths.p767e780} className="w-5 h-5" fill="var(--secondary-foreground)" />
-          </button>
         </div>
 
         {/* Search Input Area */}
@@ -238,14 +263,38 @@ function EmployeeTable({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-12 pr-12 py-3 bg-transparent border border-border rounded-lg text-[length:var(--text-paragraph-md)] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="Search, filter or give the AI a task..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim() && selectedRole) {
+                saveSearchQuery(searchQuery, selectedRole);
+              }
+            }}
+            className="w-full pl-12 pr-24 py-3 bg-transparent border border-border rounded-lg text-[length:var(--text-paragraph-md)] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="Search or filter — or ask AI to help…"
           />
-          <div className="absolute inset-y-0 right-2 flex items-center">
-            <div className="bg-chart-2 p-1 rounded-lg cursor-pointer">
+          {/* Search History Button */}
+          <button
+            onClick={onOpenSearchHistory}
+            className="absolute inset-y-0 right-14 flex items-center cursor-pointer hover:opacity-80 transition-opacity group"
+            title="Search history"
+          >
+            <div className="p-2 rounded-lg hover:bg-muted/50 transition-colors">
+              <History className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </div>
+          </button>
+          {/* Submit Search Button */}
+          <button
+            onClick={() => {
+              if (searchQuery.trim() && selectedRole) {
+                saveSearchQuery(searchQuery, selectedRole);
+              }
+            }}
+            className="absolute inset-y-0 right-2 flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+            title="Save search"
+          >
+            <div className="bg-chart-2 p-1 rounded-lg">
               <Icon path={svgPaths.p3e35800} className="w-6 h-6" fill="#0D447A" viewBox="0 0 24 24" />
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Filters */}
@@ -262,6 +311,22 @@ function EmployeeTable({
           ))}
 
           <div className="flex-1"></div>
+
+          {(Object.values(filters).some(f => f.length > 0) || searchQuery.length > 0) && (
+            <button
+              onClick={onClearFilters}
+              className="text-[length:var(--text-paragraph-sm)] font-[number:var(--font-weight-semi-bold)] text-black hover:opacity-70 transition-all cursor-pointer mr-3 px-2 py-1"
+            >
+              Clear filters
+            </button>
+          )}
+          <button
+            onClick={onOpenSavedSearches}
+            className="flex items-center gap-1.5 px-3 py-2 border border-border text-secondary-foreground hover:bg-muted/50 rounded-lg transition-colors cursor-pointer"
+          >
+            <span className="font-[number:var(--font-weight-semi-bold)] text-[length:var(--text-paragraph-sm)]">Saved searches</span>
+            <Icon path={svgPaths.p767e780} className="w-5 h-5" fill="var(--secondary-foreground)" />
+          </button>
           <button
             onClick={onOpenFilters}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
@@ -462,8 +527,11 @@ function EmployeeTable({
 }
 
 export default function App() {
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCustomizeColumnsOpen, setIsCustomizeColumnsOpen] = useState(false);
+  const [isSavedSearchesOpen, setIsSavedSearchesOpen] = useState(false);
+  const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
 
   // Search, Filter & Pagination State
@@ -551,6 +619,11 @@ export default function App() {
     setCurrentPage(1);
   };
 
+  const handleApplySavedSearch = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
+
   const toggleFilterChip = (chip: string) => {
     setFilters(prev => {
       const newFilters = { ...prev };
@@ -586,41 +659,66 @@ export default function App() {
     setCurrentPage(1);
   };
 
+  const handleClearFilters = () => {
+    setFilters({
+      companies: [],
+      offices: [],
+      departments: [],
+      roles: [],
+      permissions: [],
+      employmentTypes: [],
+    });
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
+
   const selectedEmployeeAvatars = EMPLOYEES
     .filter(e => selectedEmployees.includes(e.id))
     .map(e => e.avatar);
 
   return (
-    <div className="min-h-screen bg-background font-[family-name:var(--font-inter)] text-foreground selection:bg-primary/20">
-      <Header />
-      <main className="flex flex-col">
-        <PageTitle />
-        <Tabs />
-        <div className="flex-1">
-          <EmployeeTable
-            employees={paginatedEmployees}
-            totalEmployees={filteredEmployees.length}
-            selectedEmployees={selectedEmployees}
-            onToggleEmployee={toggleEmployee}
-            onToggleAll={toggleAll}
-            onOpenFilters={() => setIsFilterOpen(true)}
-            onOpenCustomizeColumns={() => setIsCustomizeColumnsOpen(true)}
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-            filters={filters}
-            onToggleFilterChip={toggleFilterChip}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            visibleColumns={visibleColumns}
-          />
+    <>
+      {!selectedRole ? (
+        <RoleSelection onSelectRole={setSelectedRole} />
+      ) : (
+        <div className="min-h-screen bg-background font-[family-name:var(--font-inter)] text-foreground selection:bg-primary/20">
+          <Header selectedRole={selectedRole} onChangeRole={() => setSelectedRole(null)} />
+          <main className="flex flex-col">
+            <PageTitle />
+            <Tabs />
+            <div className="flex-1">
+              <EmployeeTable
+                employees={paginatedEmployees}
+                totalEmployees={EMPLOYEES.length}
+                selectedEmployees={selectedEmployees}
+                onToggleEmployee={toggleEmployee}
+                onToggleAll={toggleAll}
+                onOpenFilters={() => setIsFilterOpen(true)}
+                onOpenSavedSearches={() => setIsSavedSearchesOpen(true)}
+                onOpenSearchHistory={() => setIsSearchHistoryOpen(true)}
+                onOpenCustomizeColumns={() => setIsCustomizeColumnsOpen(true)}
+                onClearFilters={handleClearFilters}
+                filters={filters}
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
+                onToggleFilterChip={toggleFilterChip}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                visibleColumns={visibleColumns}
+                selectedRole={selectedRole}
+              />
+            </div>
+          </main>
+          <AnimatePresence>
+            {isFilterOpen && <FilterPanel onClose={() => setIsFilterOpen(false)} filters={filters} onApply={handleFilterApply} />}
+            {isSavedSearchesOpen && <SavedSearchesPanel onClose={() => setIsSavedSearchesOpen(false)} onApply={handleApplySavedSearch} />}
+            {isSearchHistoryOpen && <SearchHistoryPanel onClose={() => setIsSearchHistoryOpen(false)} onApplySearch={handleSearchChange} />}
+            {isCustomizeColumnsOpen && <CustomizeColumnsPanel onClose={() => setIsCustomizeColumnsOpen(false)} allColumns={AVAILABLE_COLUMNS} visibleColumns={visibleColumns} onToggleColumn={toggleColumn} />}
+            {selectedEmployees.length > 0 && <BulkActionMenu key="bulk-menu" selectedAvatars={selectedEmployeeAvatars} />}
+          </AnimatePresence>
         </div>
-      </main>
-      <AnimatePresence>
-        {isFilterOpen && <FilterPanel onClose={() => setIsFilterOpen(false)} filters={filters} onApply={handleFilterApply} />}
-        {isCustomizeColumnsOpen && <CustomizeColumnsPanel onClose={() => setIsCustomizeColumnsOpen(false)} allColumns={AVAILABLE_COLUMNS} visibleColumns={visibleColumns} onToggleColumn={toggleColumn} />}
-        {selectedEmployees.length > 0 && <BulkActionMenu key="bulk-menu" selectedAvatars={selectedEmployeeAvatars} />}
-      </AnimatePresence>
-    </div>
+      )}
+    </>
   );
 }

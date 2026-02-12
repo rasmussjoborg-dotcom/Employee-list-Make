@@ -24,29 +24,82 @@ export interface FilterState {
     employmentTypes: string[];
 }
 
-export const NAMES = [
-    "Nora Halvorsen", "Clara Jensen", "James Whitmore", "Sophie Andersson", "Elin Strandberg",
-    "Erik Lundgren", "Liam Smith", "Olivia Johnson", "Noah Williams", "Emma Brown",
-    "Oliver Jones", "Ava Garcia", "Elijah Miller", "Charlotte Davis", "William Rodriguez",
-    "Sophia Martinez", "James Hernandez", "Amelia Lopez", "Benjamin Gonzalez", "Mia Wilson",
-    "Lucas Anderson", "Harper Thomas", "Henry Taylor", "Evelyn Moore", "Alexander Jackson",
-    "Abigail Martin", "Michael Lee", "Emily Perez", "Daniel Thompson", "Elizabeth White",
-    "Matthew Harris", "Sofia Sanchez", "Jackson Clark", "Avery Ramirez", "Sebastian Lewis",
-    "Ella Robinson", "David Walker", "Madison Young", "Carter Allen", "Scarlett King",
-    "Wyatt Wright", "Victoria Scott", "Jayden Torres", "Luna Nguyen", "John Hill",
-    "Grace Flores", "Owen Green", "Chloe Adams", "Dylan Nelson", "Penelope Baker",
-    "Luke Hall", "Layla Rivera", "Gabriel Campbell", "Riley Mitchell", "Anthony Carter",
-    "Zoey Roberts", "Isaac Gomez", "Nora Phillips", "Grayson Evans", "Lily Turner",
-    "Jack Diaz", "Eleanor Parker", "Julian Cruz", "Hannah Edwards", "Levi Collins",
-    "Lillian Reyes", "Christopher Stewart", "Addison Morris", "Joshua Morales", "Aubrey Murphy",
-    "Andrew Cook", "Stella Rogers", "Lincoln Gutierrez", "Natalie Ortiz", "Mateo Morgan",
-    "Zoe Cooper", "Ryan Peterson", "Leah Bailey", "Jaxon Reed", "Hazel Kelly",
-    "Nathan Howard", "Violet Ramos", "Aaron Cox", "Aurora Ward", "Isaiah Richardson",
-    "Savannah Watson", "Thomas Brooks", "Audrey Chavez", "Charles Wood", "Brooklyn Bennett",
-    "Caleb Gray", "Bella Mendoza", "Josiah Ruiz", "Claire Hughes", "Christian Price",
-    "Skylar Alvarez", "Hunter Castillo", "Lucy Sanders", "Eli Patel", "Paisley Myers",
-    "Jonathan Long", "Everly Ross", "Connor Foster", "Anna Jimenez", "Santiago Powell"
+export interface SavedSearch {
+    id: string;
+    name: string;
+    filters: FilterState;
+}
+
+export const SAVED_SEARCHES: SavedSearch[] = [
+    {
+        id: "ss-1",
+        name: "Stockholm Developers",
+        filters: {
+            companies: ["Novidio AB"],
+            offices: ["Stockholm"],
+            departments: ["Product & Tech"],
+            roles: ["Developer"],
+            permissions: [],
+            employmentTypes: []
+        }
+    },
+    {
+        id: "ss-2",
+        name: "London Managers",
+        filters: {
+            companies: ["Novidio Ltd"],
+            offices: ["London"],
+            departments: [],
+            roles: [],
+            permissions: ["Manager"],
+            employmentTypes: []
+        }
+    },
+    {
+        id: "ss-3",
+        name: "Swedish Consultants",
+        filters: {
+            companies: ["Novidio AB"],
+            offices: ["Stockholm"],
+            departments: [],
+            roles: [],
+            permissions: [],
+            employmentTypes: ["Consultant"]
+        }
+    }
 ];
+
+export const SWEDISH_NAMES = [
+    "Nora Halvorsen", "Clara Jensen", "Sophie Andersson", "Elin Strandberg", "Erik Lundgren",
+    "Luna Berg", "Axel Holm", "Saga Nor", "Hugo Lind", "Freja Ek",
+    "Elias Vik", "Alma Sol", "Ivar Dal", "Astrid Ny", "Oskar Sjv",
+    "Ebba Gran", "Arvid Eng", "Klara Berg", "Ludvig Ask", "Stina Ahl",
+    "Malte Loo", "Wilma Ros", "Hjalmar Sten", "Tyra Falk", "Sixten Alv",
+    "Ines Blom", "Folke Gren", "Signe Björk", "Gunnar Malm", "Siri Hed",
+    "Ture Sjö", "Agnes Järn", "Valter Alm", "Ellen Bark", "Einar Kvist",
+    "Maja Ström", "Lars Varg", "Henrik Sjö", "Linn Malm", "Sven Blom",
+    "Karin Lind", "Olof Berg", "Ingrid Ek", "Björn Dal", "Ulla Ny",
+    "Eirik Fors", "Gudrun Alm", "Torsten Hed", "Astrid Sjö", "Ragnar Ek"
+];
+
+export const ENGLISH_NAMES = [
+    "James Whitmore", "Liam Smith", "Olivia Johnson", "Noah Williams", "Emma Brown",
+    "Oliver Jones", "Ava Garcia", "Elijah Miller", "Charlotte Davis", "William Rodriguez",
+    "James Hernandez", "Amelia Lopez", "Benjamin Gonzalez", "Mia Wilson", "Lucas Anderson",
+    "Harper Thomas", "Henry Taylor", "Evelyn Moore", "Alexander Jackson", "Abigail Martin",
+    "Michael Lee", "Emily Perez", "Daniel Thompson", "Elizabeth White", "Matthew Harris",
+    "Jackson Clark", "Avery Ramirez", "Sebastian Lewis", "Ella Robinson", "David Walker",
+    "Madison Young", "Carter Allen", "Scarlett King", "Wyatt Wright"
+];
+
+export const MIXED_NAMES = [
+    "Sofia Sanchez", "Jayden Torres", "Luna Nguyen", "Grace Flores", "Layla Rivera",
+    "Gabriel Campbell", "Riley Mitchell", "Anthony Carter", "Zoey Roberts", "Isaac Gomez",
+    "Jack Diaz", "Eleanor Parker", "Julian Cruz", "Hannah Edwards", "Levi Collins",
+    "Lillian Reyes", "Christopher Stewart", "Addison Morris", "Joshua Morales", "Aubrey Murphy"
+];
+
+export const NAMES = [...SWEDISH_NAMES, ...ENGLISH_NAMES, ...MIXED_NAMES];
 
 export const COMPANIES = ["Novidio AB", "Novidio Ltd"];
 export const OFFICES = ["Stockholm", "London"];
@@ -61,12 +114,48 @@ function getRandomElement<T>(arr: readonly T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+}
+
 function generateEmployees(count: number): Employee[] {
     const employees: Employee[] = [];
 
-    // 1. Generate basic employee data
+    // 1. Prepare name pools (shuffled to ensure variety)
+    const swedishPool = shuffleArray(SWEDISH_NAMES);
+    const englishPool = shuffleArray(ENGLISH_NAMES);
+    const mixedPool = shuffleArray(MIXED_NAMES);
+
+    const swedishCount = Math.floor(count * 0.5);
+    const englishCount = Math.floor(count * 0.3);
+    const mixedCount = count - swedishCount - englishCount;
+
+    const namesToUse: string[] = [];
+
+    // Fill with Swedish (50%)
+    for (let i = 0; i < swedishCount; i++) {
+        namesToUse.push(swedishPool[i % swedishPool.length]);
+    }
+    // Fill with English (30%)
+    for (let i = 0; i < englishCount; i++) {
+        namesToUse.push(englishPool[i % englishPool.length]);
+    }
+    // Fill with Mixed (20%)
+    for (let i = 0; i < mixedCount; i++) {
+        namesToUse.push(mixedPool[i % mixedPool.length]);
+    }
+
+    // Shuffle final name list so they are distributed across the table
+    const finalNames = shuffleArray(namesToUse);
+
+    // 2. Generate basic employee data
     for (let i = 0; i < count; i++) {
-        const name = NAMES[i % NAMES.length] + (i >= NAMES.length ? ` ${Math.ceil(i / NAMES.length) + 1}` : "");
+        const name = finalNames[i];
         const role = getRandomElement(ROLES);
         const titlePrefix = getRandomElement(TITLES);
 

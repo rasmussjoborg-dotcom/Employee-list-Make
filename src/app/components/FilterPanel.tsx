@@ -118,17 +118,17 @@ export function FilterPanel({ onClose, filters, onApply }: FilterPanelProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
         className="absolute inset-0 bg-black/15 pointer-events-auto"
         onClick={onClose}
       />
 
       {/* Panel */}
       <motion.div
-        initial={{ opacity: 0, x: 20 }}
+        initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 20 }}
-        transition={{ duration: 0.2 }}
+        exit={{ opacity: 0, x: 40 }}
+        transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
         className="pointer-events-auto relative mr-2 my-2 w-[344px] h-[calc(100vh-16px)] flex flex-col bg-card rounded-[calc(var(--radius)*2)] shadow-lg overflow-hidden border border-border"
       >
         {/* Header */}
